@@ -1,4 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
+import { createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 
 const authEnabled = Boolean(process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY && process.env.NUXT_CLERK_SECRET_KEY)
 
@@ -19,6 +21,9 @@ export default defineNuxtConfig({
   ],
   css: ['~/assets/css/main.css'],
   vite: { plugins: [tailwindcss()] },
+  nitro: {
+    externals: { inline: ['@libsql/client', '@libsql/hrana-client', '@libsql/isomorphic-ws'] },
+  },
   shadcn: { prefix: '', componentDir: './app/components/ui' },
   runtimeConfig: {
     tursoDatabaseUrl: '',
@@ -31,6 +36,7 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'en' },
       title: 'HorribleHosts — Better trips start with honest stories',
       meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'theme-color', content: '#b74527' },
         { name: 'description', content: 'Read honest, publicly anonymous Airbnb and Vrbo guest experiences. Free to browse. Sign in to share your story.' },
       ],
@@ -41,12 +47,15 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
+    '/': { headers: { 'cache-control': 'no-store' } },
+    '/stories/**': { headers: { 'cache-control': 'no-store' } },
+    '/submit': { headers: { 'cache-control': 'no-store' } },
     '/api/**': { headers: { 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' } },
     '/**': { headers: { 'referrer-policy': 'strict-origin-when-cross-origin', 'x-content-type-options': 'nosniff', 'x-frame-options': 'DENY' } },
   },
   pwa: {
     registerType: 'prompt',
-    includeAssets: ['favicon.svg', 'icons/*.png', 'offline.html'],
+    includeAssets: ['favicon.svg', 'icons/*.png'],
     manifest: {
       name: 'HorribleHosts — Honest guest stories',
       short_name: 'HorribleHosts',
@@ -64,9 +73,16 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,png,svg,ico,woff2}'],
-      navigateFallback: '/offline.html',
-      navigateFallbackDenylist: [/^\/api\//],
-      runtimeCaching: [],
+      additionalManifestEntries: [{
+        url: '/offline.html',
+        revision: createHash('sha256').update(readFileSync(new URL('./public/offline.html', import.meta.url))).digest('hex'),
+      }],
+      navigateFallback: null,
+      runtimeCaching: [{
+        urlPattern: ({ request }) => request.mode === 'navigate',
+        handler: 'NetworkOnly',
+        options: { precacheFallback: { fallbackURL: '/offline.html' } },
+      }],
       cleanupOutdatedCaches: true,
     },
   },

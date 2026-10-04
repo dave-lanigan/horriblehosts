@@ -51,7 +51,7 @@ bun run build
 bun run preview
 ```
 
-Tests cover input bounds, supported values, consent, date validation, and the public response allowlist. For an end-to-end check with your service credentials, sign in, submit a story, then open its URL in a private browser window. Verify that the story is readable without signing in and that no account information appears.
+Tests cover input bounds, supported values, consent, date validation, and the public response allowlist. API tests use a temporary SQLite database and a test-only authentication context to verify public reads, persistence, same-origin checks, authenticated write requirements, search escaping, and the posting quota. They do not replace a real Clerk sign-in test. For an end-to-end check with your service credentials, sign in, submit a story, then open its URL in a private browser window. Verify that the story is readable without signing in and that no account information appears.
 
 ## Deploy to Vercel
 

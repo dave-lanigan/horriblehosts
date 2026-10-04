@@ -10,6 +10,16 @@ const pending = ref(false)
 const error = ref('')
 const errorBox = useTemplateRef('errorBox')
 const maxMonth = new Date().toISOString().slice(0, 7)
+const published = ref(false)
+const hasDraft = computed(() => !published.value && Boolean(form.title || form.location || form.body || form.stayMonth || form.category))
+function protectDraft(event: BeforeUnloadEvent) {
+  if (!hasDraft.value) return
+  event.preventDefault()
+  event.returnValue = ''
+}
+onMounted(() => window.addEventListener('beforeunload', protectDraft))
+onBeforeUnmount(() => window.removeEventListener('beforeunload', protectDraft))
+onBeforeRouteLeave(() => !hasDraft.value || window.confirm('Leave without publishing? Your draft will be lost.'))
 async function submit() {
   if (pending.value) return
   error.value = ''
@@ -17,6 +27,7 @@ async function submit() {
     const body = validateReport(form)
     pending.value = true
     const result = await $fetch<{ report: Report }>('/api/reports', { method: 'POST', body })
+    published.value = true
     await navigateTo(`/stories/${result.report.id}`)
   } catch (failure) {
     const response = failure as { data?: { message?: string }; message?: string }
@@ -30,7 +41,7 @@ async function submit() {
 </script>
 
 <template>
-  <form class="report-form" @submit.prevent="submit">
+  <form class="report-form" autocomplete="off" @submit.prevent="submit">
     <div v-if="error" ref="errorBox" tabindex="-1" class="form-error" role="alert">{{ error }}</div>
     <fieldset :disabled="pending">
       <legend class="sr-only">Your guest experience</legend>
